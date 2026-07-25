@@ -1,0 +1,43 @@
+============================================================
+ DOCKER DESKTOP RESOURCE SNAPSHOT
+ Fecha: 2026-07-11 12:50:00
+============================================================
+
+--- Recursos asignados al engine ---
+ Server Version: 28.3.2
+ Kernel Version: 6.10.14-linuxkit
+ Operating System: Docker Desktop
+ Architecture: aarch64
+ CPUs: 10
+ Total Memory: 7.654GiB
+
+--- Uso de disco por Docker ---
+TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE
+Images          8         6         9.993GB   5.666GB (56%)
+Containers      7         1         4.395MB   4.362MB (99%)
+Local Volumes   10        3         2.065GB   66.38MB (3%)
+Build Cache     126       0         6.18GB    6.18GB
+
+--- Contenedores activos (si los hay) ---
+NAMES           IMAGE       STATUS        PORTS
+yeschef-mysql   mysql:8.0   Up 13 hours   0.0.0.0:3306->3306/tcp, [::]:3306->3306/tcp
+
+--- Limites por contenedor (placeholder para revertir) ---
+Si modificaste docker-compose.yml, los limites por servicio son:
+  wazuh.indexer:    mem_limit=1.5g  cpus=2.0
+  wazuh.manager:    mem_limit=1g    cpus=1.5
+  wazuh.dashboard:  mem_limit=1g    cpus=1.0
+  wazuh.dvwa_agent: mem_limit=512m  cpus=0.5
+  suricata:         mem_limit=512m  cpus=0.5
+  victim.dvwa:      mem_limit=512m  cpus=0.5
+
+Para revertir los limites en docker-compose.yml:
+  1. Abrir docker/docker-compose.yml
+  2. Eliminar o comentar las lineas mem_limit y cpus de cada servicio
+  3. Ejecutar: docker compose -f docker/docker-compose.yml up -d
+
+Para revertir el total de RAM de Docker Desktop a su valor original:
+  1. Abrir Docker Desktop
+  2. Settings (engranaje) -> Resources
+  3. Mover el slider Memory al valor previo (anotar antes de cambiar)
+  4. Apply & Restart

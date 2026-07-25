@@ -1,0 +1,11 @@
+{
+  "0": "Benign",
+  "4": "DoS",
+  "3": "DDoS",
+  "2": "BruteForce",
+  "8": "WebAttack",
+  "7": "PortScan",
+  "1": "Bot",
+  "5": "Infiltration",
+  "6": "Other"
+}

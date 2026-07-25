@@ -1,0 +1,52 @@
+{
+  "timestamp": "20260711_181757",
+  "n_classes": 9,
+  "n_features": 69,
+  "n_train": 400000,
+  "n_test": 100000,
+  "label_mapping": {
+    "0": "Benign",
+    "4": "DoS",
+    "3": "DDoS",
+    "2": "BruteForce",
+    "8": "WebAttack",
+    "7": "PortScan",
+    "1": "Bot",
+    "5": "Infiltration",
+    "6": "Other"
+  },
+  "models": {
+    "random_forest": {
+      "name": "Random Forest",
+      "accuracy": 0.99551,
+      "precision_macro": 0.8543152232782469,
+      "recall_macro": 0.9759075150997195,
+      "f1_macro": 0.881724752652348,
+      "f1_weighted": 0.9965214892862787,
+      "roc_auc_macro": NaN,
+      "train_time_s": 11.842007875442505
+    },
+    "xgboost": {
+      "name": "XGBoost",
+      "accuracy": 0.99912,
+      "precision_macro": 0.9549478148434919,
+      "recall_macro": 0.8733904948738624,
+      "f1_macro": 0.9034134376006125,
+      "f1_weighted": 0.9991061779639074,
+      "roc_auc_macro": NaN,
+      "train_time_s": 20.501099109649658,
+      "best_params": {
+        "n_estimators": 200,
+        "max_depth": 12,
+        "learning_rate": 0.1205712628744377,
+        "subsample": 0.8394633936788146,
+        "colsample_bytree": 0.6624074561769746,
+        "min_child_weight": 2,
+        "gamma": 0.05808361216819946,
+        "reg_alpha": 0.8661761457749352,
+        "reg_lambda": 1.2022300234864176
+      }
+    }
+  },
+  "best_model": "XGBoost"
+}

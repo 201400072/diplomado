@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "============================================================"
+echo " Verificación de prerrequisitos (FASE 2)"
+echo "============================================================"
+printf "macOS:        %s\n" "$(sw_vers -productVersion)"
+printf "Arquitectura: %s\n" "$(uname -m)"
+printf "Docker:       %s\n" "$(docker --version)"
+printf "Compose:      %s\n" "$(docker compose version)"
+printf "Python:       %s\n" "$(python3.12 --version)"
+printf "Git:          %s\n" "$(git --version)"
+printf "Brew:         %s\n" "$(brew --version | head -n1)"
+printf "Nmap:         %s\n" "$(nmap --version 2>&1 | head -n1)"
+printf "Nping:        %s\n" "$(nping --version 2>&1 | head -n1)"
+printf "iperf3:       %s\n" "$(iperf3 --version 2>&1 | head -n1)"
+printf "Apache Bench: %s\n" "$(ab -V 2>&1 | head -n1)"
+printf "jq:           %s\n" "$(jq --version)"
+printf "curl:         %s\n" "$(curl --version | head -n1)"
+printf "libomp:       %s\n" "$(brew list libomp --versions 2>/dev/null || echo 'no instalado')"
+
+echo ""
+echo "============================================================"
+echo " Recursos Docker Desktop"
+echo "============================================================"
+docker system info | grep -E "CPUs|Total Memory|Docker Root Dir"
+
+echo ""
+echo "============================================================"
+echo " Estructura del proyecto"
+echo "============================================================"
+cd "$(dirname "$0")/.."
+ls -1
+
+echo ""
+echo "============================================================"
+echo " Entornos virtuales"
+echo "============================================================"
+[ -d ml/.venv-ml ] && echo "  [OK] ml/.venv-ml existe" || echo "  [!!] ml/.venv-ml NO existe"
+[ -d api/.venv-api ] && echo "  [OK] api/.venv-api existe" || echo "  [!!] api/.venv-api NO existe"
+
+echo ""
+echo "============================================================"
+echo " OK - FASE 2 completa"
+echo "============================================================"

@@ -1,0 +1,478 @@
+{
+  "info": {
+    "name": "Wazuh SOC Diplomado",
+    "description": "Coleccion Postman para la API REST de Wazuh 4.9. Single-node del laboratorio SOC Open Source.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://localhost:55000",
+      "type": "string"
+    },
+    {
+      "key": "wazuh_user",
+      "value": "wazuh-wui",
+      "type": "string"
+    },
+    {
+      "key": "wazuh_password",
+      "value": "MyS3cr37P450r.*-",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Auth",
+      "item": [
+        {
+          "name": "Obtener JWT Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/security/user/authenticate?raw=true",
+              "host": ["{{base_url}}"],
+              "path": ["security", "user", "authenticate"],
+              "query": [
+                {
+                  "key": "raw",
+                  "value": "true",
+                  "description": "Devuelve el JWT puro sin JSON wrapper"
+                }
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{wazuh_user}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{wazuh_password}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Autenticacion basica. El response es un JWT puro. Postman lo guarda en la variable jwt_token automaticamente con el script Tests."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const token = pm.response.text();",
+                  "    pm.collectionVariables.set('jwt_token', token);",
+                  "    console.log('JWT guardado:', token.substring(0, 40) + '...');",
+                  "} else {",
+                  "    console.error('Error autenticando:', pm.response.status, pm.response.text());",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Manager Status",
+      "item": [
+        {
+          "name": "Estado procesos del manager",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/manager/status",
+              "host": ["{{base_url}}"],
+              "path": ["manager", "status"]
+            },
+            "description": "Devuelve el estado (running/stopped) de cada proceso interno del manager: analysisd, monitord, modulesd, apid, etc."
+          }
+        },
+        {
+          "name": "Info del manager",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/manager/info",
+              "host": ["{{base_url}}"],
+              "path": ["manager", "info"]
+            },
+            "description": "Version, compilacion, fecha del manager."
+          }
+        },
+        {
+          "name": "Configuracion del manager",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/manager/configuration?section=global",
+              "host": ["{{base_url}}"],
+              "path": ["manager", "configuration"],
+              "query": [
+                {
+                  "key": "section",
+                  "value": "global",
+                  "description": "Secciones: global, ruleset, comms, syscheckd, rootcheck, remote, localfile, client, alerts, logging, etc."
+                }
+              ]
+            },
+            "description": "Lee una seccion del ossec.conf. Cambia el parametro section para explorar otras."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Agents",
+      "item": [
+        {
+          "name": "Listar agentes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/agents?limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["agents"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Numero maximo de agentes a devolver"
+                }
+              ]
+            },
+            "description": "Lista los agentes Wazuh conectados. Sin agentes por ahora, devolvera array vacio."
+          }
+        },
+        {
+          "name": "Resumen agentes (status=active,disconnected,pending)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/agents/summary/status",
+              "host": ["{{base_url}}"],
+              "path": ["agents", "summary", "status"]
+            },
+            "description": "Cuenta cuantos agentes hay en cada estado."
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Rules",
+      "item": [
+        {
+          "name": "Listar reglas (top 5)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/rules?limit=5",
+              "host": ["{{base_url}}"],
+              "path": ["rules"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            },
+            "description": "Lista las reglas cargadas. Cambia limit o agrega &offset=10 para paginar."
+          }
+        },
+        {
+          "name": "Reglas custom Suricata (100xxx)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/rules?group=suricata&limit=50",
+              "host": ["{{base_url}}"],
+              "path": ["rules"],
+              "query": [
+                {
+                  "key": "group",
+                  "value": "suricata",
+                  "description": "Filtra por grupo"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            },
+            "description": "Lista las 9 reglas custom que creamos para Suricata (100001-100022)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Logs del Manager",
+      "item": [
+        {
+          "name": "Resumen de logs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/manager/logs/summary",
+              "host": ["{{base_url}}"],
+              "path": ["manager", "logs", "summary"]
+            },
+            "description": "Resumen (conteo) de logs por nivel de severidad."
+          }
+        },
+        {
+          "name": "Logs del manager (ultimos 20)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/manager/logs?limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["manager", "logs"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Lee los ultimos logs del manager (incluye wazuh-modulesd, wazuh-analysisd, etc)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Cluster",
+      "item": [
+        {
+          "name": "Estado del cluster",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/cluster/status",
+              "host": ["{{base_url}}"],
+              "path": ["cluster", "status"]
+            },
+            "description": "Single-node devolvera disabled o basic info."
+          }
+        },
+        {
+          "name": "Nodos del cluster",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/cluster/nodes",
+              "host": ["{{base_url}}"],
+              "path": ["cluster", "nodes"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Syscheck (FIM)",
+      "item": [
+        {
+          "name": "Syscheck del manager (baseline)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/syscheck/000?limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["syscheck", "000"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Resultado del File Integrity Monitoring del propio manager. Agent 000 es el manager mismo."
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Security",
+      "item": [
+        {
+          "name": "Politicas de seguridad",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/security/actions",
+              "host": ["{{base_url}}"],
+              "path": ["security", "actions"]
+            },
+            "description": "Lista todas las acciones/politicas RBAC."
+          }
+        },
+        {
+          "name": "Roles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/security/roles",
+              "host": ["{{base_url}}"],
+              "path": ["security", "roles"]
+            }
+          }
+        },
+        {
+          "name": "Usuarios",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/security/users",
+              "host": ["{{base_url}}"],
+              "path": ["security", "users"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. OpenSearch directo (Indexer)",
+      "item": [
+        {
+          "name": "Cluster health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "https://localhost:9200/_cluster/health",
+              "host": ["https://localhost:9200"],
+              "path": ["_cluster", "health"]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "admin",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "SecretPassword",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "OpenSearch directo (no requiere JWT, usa basic auth)."
+          }
+        },
+        {
+          "name": "Listar indices",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "https://localhost:9200/_cat/indices?v",
+              "host": ["https://localhost:9200"],
+              "path": ["_cat", "indices"],
+              "query": [
+                {
+                  "key": "v",
+                  "value": null,
+                  "description": "Verbose: muestra cabeceras"
+                }
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "admin",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "SecretPassword",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Buscar en wazuh-alerts (ultimas 3)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "https://localhost:9200/wazuh-alerts-*/_search?size=3&q=*:*",
+              "host": ["https://localhost:9200"],
+              "path": ["wazuh-alerts-*", "_search"],
+              "query": [
+                {
+                  "key": "size",
+                  "value": "3"
+                },
+                {
+                  "key": "q",
+                  "value": "*:*"
+                }
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "admin",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "SecretPassword",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Busca las ultimas 3 alertas indexadas por Wazuh."
+          }
+        }
+      ]
+    }
+  ]
+}

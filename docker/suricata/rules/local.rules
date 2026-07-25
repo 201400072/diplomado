@@ -1,0 +1,35 @@
+# ============================================================
+# Reglas personalizadas del laboratorio SOC
+# ============================================================
+
+# --- SQL Injection contra DVWA ---
+alert http any any -> $HOME_NET any (msg:"DVWA SQL Injection - UNION SELECT"; content:"UNION"; nocase; content:"SELECT"; nocase; sid:1000001; rev:1; classtype:web-application-attack;)
+
+alert http any any -> $HOME_NET any (msg:"DVWA SQL Injection - OR 1=1"; content:"OR"; nocase; content:"1=1"; nocase; sid:1000002; rev:1; classtype:web-application-attack;)
+
+alert http any any -> $HOME_NET any (msg:"DVWA SQL Injection - DROP TABLE"; content:"DROP"; nocase; content:"TABLE"; nocase; sid:1000003; rev:1; classtype:web-application-attack;)
+
+# --- Cross-Site Scripting (XSS) contra DVWA ---
+alert http any any -> $HOME_NET any (msg:"DVWA XSS - Script tag reflected"; content:"<script"; nocase; sid:1000010; rev:1; classtype:web-application-attack;)
+
+alert http any any -> $HOME_NET any (msg:"DVWA XSS - javascript URI"; content:"javascript:"; nocase; sid:1000011; rev:1; classtype:web-application-attack;)
+
+alert http any any -> $HOME_NET any (msg:"DVWA XSS - onerror handler"; content:"onerror"; nocase; sid:1000012; rev:1; classtype:web-application-attack;)
+
+# --- Web Shell upload contra DVWA ---
+alert http any any -> $HOME_NET any (msg:"DVWA Web Shell - PHP payload"; content:"<?php"; nocase; sid:1000020; rev:1; classtype:web-application-attack;)
+
+alert http any any -> $HOME_NET any (msg:"DVWA Web Shell - system command"; content:"system("; nocase; sid:1000021; rev:1; classtype:web-application-attack;)
+
+# --- Nmap scans ---
+alert http any any -> $HOME_NET any (msg:"POSIBLE Nmap scan - User-Agent"; content:"Nmap"; http_user_agent; nocase; sid:1000030; rev:1; classtype:attempted-recon;)
+
+alert http any any -> $HOME_NET any (msg:"POSIBLE Nmap script scan"; content:"nmap"; http_uri; nocase; sid:1000031; rev:1; classtype:attempted-recon;)
+
+# --- DoS patterns ---
+alert http any any -> $HOME_NET any (msg:"POSIBLE HTTP flood - user agent ApacheBench"; content:"ApacheBench"; http_user_agent; nocase; sid:1000040; rev:1; classtype:attempted-dos;)
+
+# --- Brute force ---
+alert http any any -> $HOME_NET any (msg:"POSIBLE Brute Force - Hydra"; content:"hydra"; http_user_agent; nocase; sid:1000050; rev:1; classtype:attempted-user;)
+
+alert http any any -> $HOME_NET any (msg:"POSIBLE SQLi brute force - sqlmap"; content:"sqlmap"; http_user_agent; nocase; sid:1000051; rev:1; classtype:attempted-user;)

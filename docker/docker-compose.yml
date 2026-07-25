@@ -1,0 +1,211 @@
+name: soc-diplomado
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-restart: &default-restart
+  restart: unless-stopped
+
+networks:
+  soc_net:
+    name: soc_net
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.0.0/24
+          gateway: 10.10.0.1
+  soc_span:
+    name: soc_span
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 10.10.10.0/24
+
+volumes:
+  wazuh_manager_data:
+  wazuh_manager_etc:
+  wazuh_manager_logs:
+  wazuh_manager_queue:
+  wazuh_manager_integrations:
+  filebeat_etc:
+  filebeat_var:
+  wazuh_indexer_data:
+  wazuh_dashboard_data:
+  wazuh_dashboard_config:
+  wazuh_dashboard_custom:
+  suricata_logs:
+  suricata_rules:
+  dvwa_logs:
+
+services:
+  wazuh.indexer:
+    platform: linux/amd64
+    <<: *default-restart
+    image: wazuh/wazuh-indexer:4.8.2
+    container_name: wazuh.indexer
+    hostname: wazuh.indexer
+    networks:
+      soc_net:
+        ipv4_address: 10.10.0.11
+    ports:
+      - "9200:9200"
+    environment:
+      - "OPENSEARCH_JAVA_OPTS=-Xms1g -Xmx1g"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    mem_limit: ${LIMIT_INDEXER}
+    cpus: "2.0"
+    volumes:
+      - wazuh_indexer_data:/var/lib/wazuh-indexer
+      - ./wazuh_indexer_ssl_certs/root-ca.pem:/usr/share/wazuh-indexer/certs/root-ca.pem:ro
+      - ./wazuh_indexer_ssl_certs/wazuh.indexer-key.pem:/usr/share/wazuh-indexer/certs/wazuh.indexer.key:ro
+      - ./wazuh_indexer_ssl_certs/wazuh.indexer.pem:/usr/share/wazuh-indexer/certs/wazuh.indexer.pem:ro
+      - ./wazuh_indexer_ssl_certs/admin.pem:/usr/share/wazuh-indexer/certs/admin.pem:ro
+      - ./wazuh_indexer_ssl_certs/admin-key.pem:/usr/share/wazuh-indexer/certs/admin-key.pem:ro
+      - ./wazuh_indexer/wazuh.indexer.yml:/usr/share/wazuh-indexer/opensearch.yml:ro
+      - ./wazuh_indexer/internal_users.yml:/usr/share/wazuh-indexer/opensearch-security/internal_users.yml:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsSLk -u admin:SecretPassword https://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+    logging: *default-logging
+
+  wazuh.manager:
+    platform: linux/amd64
+    <<: *default-restart
+    image: wazuh/wazuh-manager:4.8.2
+    container_name: wazuh.manager
+    hostname: wazuh.manager
+    networks:
+      soc_net:
+        ipv4_address: 10.10.0.10
+    depends_on:
+      wazuh.indexer:
+        condition: service_healthy
+    ports:
+      - "1514:1514"
+      - "1515:1515"
+      - "514:514/udp"
+      - "55000:55000"
+    environment:
+      - INDEXER_URL=https://wazuh.indexer:9200
+      - INDEXER_USERNAME=admin
+      - INDEXER_PASSWORD=SecretPassword
+      - FILEBEAT_SSL_VERIFICATION_MODE=full
+      - SSL_CERTIFICATE_AUTHORITIES=/etc/ssl/root-ca.pem
+      - SSL_CERTIFICATE=/etc/ssl/filebeat.pem
+      - SSL_KEY=/etc/ssl/filebeat.key
+      - API_USERNAME=wazuh-wui
+      - API_PASSWORD=MyS3cr37P450r.*-
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 655360
+        hard: 655360
+    mem_limit: ${LIMIT_MANAGER}
+    cpus: "2.0" # Le damos un poco más de margen de procesamiento para la emulación
+    volumes:
+      - wazuh_manager_data:/var/ossec/data
+      - wazuh_manager_etc:/var/ossec/etc
+      - wazuh_manager_logs:/var/ossec/logs
+      - wazuh_manager_queue:/var/ossec/queue
+      - wazuh_manager_integrations:/var/ossec/integrations
+      - filebeat_etc:/etc/filebeat
+      - filebeat_var:/var/lib/filebeat
+      - suricata_logs:/var/ossec/logs/suricata:ro
+      - ./wazuh_indexer_ssl_certs/root-ca-manager.pem:/etc/ssl/root-ca.pem:ro
+      - ./wazuh_indexer_ssl_certs/wazuh.manager.pem:/etc/ssl/filebeat.pem:ro
+      - ./wazuh_indexer_ssl_certs/wazuh.manager-key.pem:/etc/ssl/filebeat.key:ro
+      - ./wazuh_cluster:/wazuh-config-mount:ro
+      - ./wazuh/custom_rules/100-suricata-rules.xml:/var/ossec/etc/rules/100-suricata-rules.xml:ro
+    logging: *default-logging
+
+  wazuh.dashboard:
+    platform: linux/amd64
+    <<: *default-restart
+    image: wazuh/wazuh-dashboard:4.8.2
+    container_name: wazuh.dashboard
+    hostname: wazuh.dashboard
+    networks:
+      soc_net:
+        ipv4_address: 10.10.0.12
+    depends_on:
+      wazuh.indexer:
+        condition: service_healthy
+    ports:
+      - "443:5601"
+    environment:
+      - INDEXER_USERNAME=admin
+      - INDEXER_PASSWORD=SecretPassword
+      - WAZUH_API_URL=https://wazuh-manager
+      - DASHBOARD_USERNAME=kibanaserver
+      - DASHBOARD_PASSWORD=kibanaserver
+      - API_USERNAME=wazuh-wui
+      - API_PASSWORD=MyS3cr37P450r.*-
+    mem_limit: ${LIMIT_DASHBOARD}
+    cpus: "1.0"
+    volumes:
+      - ./wazuh_indexer_ssl_certs/wazuh.dashboard.pem:/usr/share/wazuh-dashboard/certs/wazuh-dashboard.pem:ro
+      - ./wazuh_indexer_ssl_certs/wazuh.dashboard-key.pem:/usr/share/wazuh-dashboard/certs/wazuh-dashboard-key.pem:ro
+      - ./wazuh_indexer_ssl_certs/root-ca.pem:/usr/share/wazuh-dashboard/certs/root-ca.pem:ro
+      - ./wazuh_dashboard/opensearch_dashboards.yml:/usr/share/wazuh-dashboard/config/opensearch_dashboards.yml:ro
+      - ./wazuh_dashboard/wazuh.yml:/usr/share/wazuh-dashboard/data/wazuh/config/wazuh.yml:ro
+      - wazuh_dashboard_config:/usr/share/wazuh-dashboard/data/wazuh/config
+      - wazuh_dashboard_custom:/usr/share/wazuh-dashboard/plugins/wazuh/public/assets/custom
+    logging: *default-logging
+
+  suricata:
+    platform: linux/amd64
+    <<: *default-restart
+    image: jasonish/suricata:latest
+    container_name: suricata
+    hostname: suricata
+    networks:
+      soc_net:
+        ipv4_address: 10.10.0.30
+      soc_span:
+        ipv4_address: 10.10.10.30
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - SYS_NICE
+    environment:
+      - SURICATA_OPTIONS=-i eth1 --user suricata --group suricata -c /etc/suricata/suricata.yaml
+      - SURICATA_IFACE=eth0
+      - HOME_NET=10.10.0.0/24
+    mem_limit: ${LIMIT_SURICATA}
+    cpus: "0.5"
+    volumes:
+      - ./suricata/suricata.yaml:/etc/suricata/suricata.yaml
+      - ./suricata/rules:/etc/suricata/rules
+      - ./suricata/threshold.config:/etc/suricata/threshold.config
+      - suricata_logs:/var/log/suricata
+      - suricata_rules:/var/lib/suricata/rules
+    depends_on:
+      - wazuh.manager
+    logging: *default-logging
+
+  attacker:
+    platform: linux/amd64
+    image: kalilinux/kali-rolling
+    container_name: attacker
+    hostname: attacker
+    networks:
+      soc_net:
+        ipv4_address: 10.10.0.50
+    command: tail -f /dev/null
+    volumes:
+      - ./../attacks:/attacks:ro

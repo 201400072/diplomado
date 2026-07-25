@@ -1,0 +1,52 @@
+.venv-ml/
+.venv-api/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.DS_Store
+ml/data/raw/
+ml/models/*.joblib
+ml/models/*.pkl
+ml/models/*.bin
+ml/reports/*.png
+ml/reports/*.pdf
+!ml/models/.gitkeep
+!ml/data/.gitkeep
+.env
+*.log
+logs/
+docker/wazuh/logs/*
+docker/suricata/logs/*
+!docker/wazuh/logs/.gitkeep
+!docker/suricata/logs/.gitkeep
+*.swp
+*.swo
+.idea/
+.vscode/settings.json
+
+# Datos
+ml/data/
+
+# Archivos temporales
+ml/catboost_info/
+
+# Python
+__pycache__/
+*.pyc
+
+# Entornos virtuales
+.venv/
+venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# macOS
+.DS_Store
+

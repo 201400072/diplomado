@@ -1,0 +1,61 @@
+<group name="suricata,">
+  <rule id="100001" level="3">
+    <decoded_as>json</decoded_as>
+    <field name="event_type">alert</field>
+    <description>Suricata alert forwarded to Wazuh</description>
+  </rule>
+
+  <rule id="100002" level="12">
+    <if_sid>100001</if_sid>
+    <field name="alert.severity">1</field>
+    <description>Suricata CRITICAL alert: $(alert.signature) from $(src_ip)</description>
+  </rule>
+
+  <rule id="100003" level="8">
+    <if_sid>100001</if_sid>
+    <field name="alert.severity">2</field>
+    <description>Suricata HIGH alert: $(alert.signature) from $(src_ip)</description>
+  </rule>
+
+  <rule id="100004" level="5">
+    <if_sid>100001</if_sid>
+    <field name="alert.severity">3</field>
+    <description>Suricata MEDIUM alert: $(alert.signature) from $(src_ip)</description>
+  </rule>
+
+  <rule id="100010" level="10">
+    <if_sid>100001</if_sid>
+    <field name="alert.signature">SQL Injection</field>
+    <description>SQL Injection detected by Suricata</description>
+  </rule>
+
+  <rule id="100011" level="10">
+    <if_sid>100001</if_sid>
+    <field name="alert.signature">XSS</field>
+    <description>Cross-Site Scripting detected by Suricata</description>
+  </rule>
+
+  <rule id="100012" level="10">
+    <if_sid>100001</if_sid>
+    <field name="alert.signature">Web Shell</field>
+    <description>Web Shell upload detected by Suricata</description>
+  </rule>
+
+  <rule id="100020" level="8">
+    <if_sid>100001</if_sid>
+    <field name="alert.signature">DOS</field>
+    <description>Denial of Service attempt detected by Suricata</description>
+  </rule>
+
+  <rule id="100021" level="10">
+    <if_sid>100001</if_sid>
+    <field name="alert.signature">Nmap</field>
+    <description>Nmap scan detected by Suricata</description>
+  </rule>
+
+  <rule id="100022" level="10">
+    <if_sid>100001</if_sid>
+    <field name="alert.signature">Brute Force</field>
+    <description>Brute force attempt detected by Suricata</description>
+  </rule>
+</group>
