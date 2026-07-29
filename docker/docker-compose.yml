@@ -62,8 +62,6 @@ services:
       nofile:
         soft: 65536
         hard: 65536
-    mem_limit: ${LIMIT_INDEXER}
-    cpus: "2.0"
     volumes:
       - wazuh_indexer_data:/var/lib/wazuh-indexer
       - ./wazuh_indexer_ssl_certs/root-ca.pem:/usr/share/wazuh-indexer/certs/root-ca.pem:ro
@@ -115,8 +113,6 @@ services:
       nofile:
         soft: 655360
         hard: 655360
-    mem_limit: ${LIMIT_MANAGER}
-    cpus: "2.0" # Le damos un poco más de margen de procesamiento para la emulación
     volumes:
       - wazuh_manager_data:/var/ossec/data
       - wazuh_manager_etc:/var/ossec/etc
@@ -155,8 +151,6 @@ services:
       - DASHBOARD_PASSWORD=kibanaserver
       - API_USERNAME=wazuh-wui
       - API_PASSWORD=MyS3cr37P450r.*-
-    mem_limit: ${LIMIT_DASHBOARD}
-    cpus: "1.0"
     volumes:
       - ./wazuh_indexer_ssl_certs/wazuh.dashboard.pem:/usr/share/wazuh-dashboard/certs/wazuh-dashboard.pem:ro
       - ./wazuh_indexer_ssl_certs/wazuh.dashboard-key.pem:/usr/share/wazuh-dashboard/certs/wazuh-dashboard-key.pem:ro
@@ -170,9 +164,13 @@ services:
   suricata:
     platform: linux/amd64
     <<: *default-restart
-    image: jasonish/suricata:latest
+    build:
+      context: ./suricata
+      dockerfile: Dockerfile
     container_name: suricata
     hostname: suricata
+    sysctls:
+      - net.ipv4.ip_forward=1
     networks:
       soc_net:
         ipv4_address: 10.10.0.30
@@ -183,29 +181,53 @@ services:
       - NET_RAW
       - SYS_NICE
     environment:
-      - SURICATA_OPTIONS=-i eth1 --user suricata --group suricata -c /etc/suricata/suricata.yaml
-      - SURICATA_IFACE=eth0
-      - HOME_NET=10.10.0.0/24
-    mem_limit: ${LIMIT_SURICATA}
-    cpus: "0.5"
+      - SURICATA_OPTIONS=-i eth0 -i eth1 --user suricata --group suricata -c /etc/suricata/suricata.yaml
+      - HOME_NET=[10.10.0.0/24,10.10.10.0/24]
     volumes:
       - ./suricata/suricata.yaml:/etc/suricata/suricata.yaml
       - ./suricata/rules:/etc/suricata/rules
       - ./suricata/threshold.config:/etc/suricata/threshold.config
+      - ./suricata/docker-entrypoint.d:/etc/suricata/docker-entrypoint.d
       - suricata_logs:/var/log/suricata
       - suricata_rules:/var/lib/suricata/rules
     depends_on:
       - wazuh.manager
     logging: *default-logging
 
+  victim-dvwa:
+    platform: linux/amd64
+    <<: *default-restart
+    build:
+      context: ./dvwa
+      dockerfile: Dockerfile.agent
+    container_name: victim-dvwa
+    hostname: victim-dvwa
+    networks:
+      soc_span:
+        ipv4_address: 10.10.10.40
+    ports:
+      - "80:80"
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - dvwa_logs:/var/log/apache2
+    logging: *default-logging
+
   attacker:
     platform: linux/amd64
-    image: kalilinux/kali-rolling
+    <<: *default-restart
+    build:
+      context: ./attacker
+      dockerfile: Dockerfile
     container_name: attacker
     hostname: attacker
     networks:
       soc_net:
         ipv4_address: 10.10.0.50
-    command: tail -f /dev/null
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    command: bash -c "ip route replace 10.10.10.0/24 via 10.10.0.30 2>/dev/null || true; tail -f /dev/null"
     volumes:
       - ./../attacks:/attacks:ro
+    logging: *default-logging

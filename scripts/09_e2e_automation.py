@@ -537,6 +537,34 @@ def repair_visualizations() -> dict[str, Any]:
                         agg["params"]["field"] = KW_FIELD_ALIASES[field]
                         changed = True
 
+                # 3) Inyectar rediseño de timeline-events (Histrograma Temporal Diario Apilado)
+                if vid == "timeline-events":
+                    vis = {
+                        "title": "Tendencia Temporal de Eventos SOC (Diario)",
+                        "type": "histogram",
+                        "params": {
+                            "type": "histogram",
+                            "grid": {"categoryLines": False},
+                            "categoryAxes": [{"id": "CategoryAxis-1", "type": "category", "position": "bottom", "show": True, "style": {}, "scale": {"type": "linear"}, "labels": {"show": True, "truncate": 100}, "title": {}}],
+                            "valueAxes": [{"id": "ValueAxis-1", "name": "LeftAxis-1", "type": "value", "position": "left", "show": True, "style": {}, "scale": {"type": "linear", "mode": "normal"}, "labels": {"show": True, "rotate": 0, "filter": False, "truncate": 100}, "title": {"text": "Volumen de Eventos"}}],
+                            "seriesParams": [{"show": True, "type": "histogram", "mode": "stacked", "data": {"label": "Count", "id": "1"}, "valueAxis": "ValueAxis-1", "drawLinesBetweenPoints": True, "lineWidth": 2, "showCircles": True}],
+                            "addTooltip": True,
+                            "addLegend": True,
+                            "legendPosition": "top",
+                            "times": [],
+                            "addTimeMarker": False,
+                            "setYExtents": False,
+                            "defaultYExtents": False,
+                            "palette": {"name": "kibana_palette", "type": "palette"},
+                            "aggConfigs": [
+                                {"id": "1", "enabled": True, "type": "count", "schema": "metric", "params": {}},
+                                {"id": "2", "enabled": True, "type": "date_histogram", "schema": "segment", "params": {"field": "@timestamp", "useNormalizedEsInterval": True, "interval": "1d", "drop_partials": False, "min_doc_count": 1, "extended_bounds": {}}},
+                                {"id": "3", "enabled": True, "type": "terms", "schema": "group", "params": {"field": "rule.level", "orderBy": "1", "order": "desc", "size": 10, "otherBucket": False, "otherBucketLabel": "Other", "missingBucket": False, "missingBucketLabel": "Missing"}}
+                            ]
+                        }
+                    }
+                    changed = True
+
                 if not changed:
                     report["kept"].append(vid)
                     continue
@@ -695,6 +723,20 @@ def step_load_telemetria_dashboard() -> TestResult:
                 # Usar referencias del origen si existen; si estan vacias, inyectar las canonicas
                 src_refs = src_obj.get("references", []) or []
                 final_refs = src_refs if len(src_refs) >= len(DASHBOARD_PANEL_REFERENCES) else DASHBOARD_PANEL_REFERENCES
+                
+                # Definir Layout Grid System profesional para telemetria-soc y forzar modo oscuro
+                panels_json = [
+                    {"gridData": {"w": 48, "h": 15, "x": 0, "y": 0, "i": "1"}, "panelIndex": "1", "version": "...", "panelRefName": "panel_timeline", "embeddableConfig": {}},
+                    {"gridData": {"w": 16, "h": 12, "x": 0, "y": 15, "i": "2"}, "panelIndex": "2", "version": "...", "panelRefName": "panel_severity", "embeddableConfig": {}},
+                    {"gridData": {"w": 16, "h": 12, "x": 16, "y": 15, "i": "3"}, "panelIndex": "3", "version": "...", "panelRefName": "panel_attacks_pie", "embeddableConfig": {}},
+                    {"gridData": {"w": 16, "h": 12, "x": 32, "y": 15, "i": "4"}, "panelIndex": "4", "version": "...", "panelRefName": "panel_confidence", "embeddableConfig": {}},
+                    {"gridData": {"w": 24, "h": 14, "x": 0, "y": 27, "i": "5"}, "panelIndex": "5", "version": "...", "panelRefName": "panel_top_ip", "embeddableConfig": {}},
+                    {"gridData": {"w": 24, "h": 14, "x": 24, "y": 27, "i": "6"}, "panelIndex": "6", "version": "...", "panelRefName": "panel_ml_class", "embeddableConfig": {}},
+                    {"gridData": {"w": 48, "h": 14, "x": 0, "y": 41, "i": "7"}, "panelIndex": "7", "version": "...", "panelRefName": "panel_recent", "embeddableConfig": {}}
+                ]
+                attrs["panelsJSON"] = json.dumps(panels_json)
+                attrs["optionsJSON"] = json.dumps({"useMargins": True, "hidePanelTitles": False, "darkTheme": True})
+
                 # Crear con nuevo id
                 r_create = client.post(
                     f"{WAZUH_DASHBOARD_URL}/api/saved_objects/dashboard/{CUSTOM_DASHBOARD_ID}",

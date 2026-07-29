@@ -1,0 +1,17 @@
+{
+    "latex-workshop.latex.toolchain": {
+        "command": "latexmk",
+        "args": [
+            "-synctex=1",
+            "-interaction=nonstopmode",
+            "-file-line-error",
+            "-pdf",
+            "%DOC%"
+        ],
+        "env": {}
+    },
+    "latex-workshop.latex.recipe.default": "latexmk",
+    "latex-workshop.latex.autoBuild.run": "onSave",
+    "latex-workshop.latex.autoBuild.cleanAndRetry.enabled": false,
+    "latex-workshop.view.pdf.viewer": "tab"
+}

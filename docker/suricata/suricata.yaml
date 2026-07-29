@@ -4,8 +4,8 @@ vars:
   address-groups:
     HOME_NET: "[10.10.0.0/24,10.10.10.0/24]"
     EXTERNAL_NET: "!$HOME_NET"
-    HTTP_SERVERS: "[10.10.0.40,10.10.10.40]"
-    SSH_SERVERS: "[10.10.0.40,10.10.10.40]"
+    HTTP_SERVERS: "[10.10.0.0/24,10.10.10.0/24]"
+    SSH_SERVERS: "[10.10.0.0/24,10.10.10.0/24]"
 
 default-log-dir: /var/log/suricata/
 stats:
@@ -20,6 +20,8 @@ outputs:
       rotate-interval: 60m
       types:
         - alert
+        - http
+        - stats
 
 app-layer:
   protocols:
@@ -40,8 +42,13 @@ rule-files:
   - local.rules
 
 af-packet:
-  - interface: eth1
+  - interface: eth0
     cluster-id: 99
+    cluster-type: cluster_flow
+    defrag: yes
+    threads: 1
+  - interface: eth1
+    cluster-id: 98
     cluster-type: cluster_flow
     defrag: yes
     threads: 1
@@ -51,13 +58,9 @@ host-os-policy:
   windows: [192.168.0.0/16, 172.16.0.0/12]
   bsd: []
 
-
-# Listen on eth1 (soc_span) where DVWA resides
-
-# Limites para entorno de laboratorio
 stream:
   memcap: 64mb
-  checksum-validation: yes
+  checksum-validation: no
 
 flow:
   memcap: 32mb

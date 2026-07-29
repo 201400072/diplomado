@@ -6,18 +6,14 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV WAZUH_MANAGER_IP=10.10.0.10
 ENV WAZUH_AGENT_NAME=dvwa-server
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        curl gnupg lsb-release ca-certificates apt-transport-https \
-    && curl -s https://packages.wazuh.com/key/GPG-KEY-WAZUH | gpg --dearmor -o /usr/share/keyrings/wazuh.gpg \
-    && echo "deb [signed-by=/usr/share/keyrings/wazuh.gpg] https://packages.wazuh.com/4.x/apt/ stable main" > /etc/apt/sources.list.d/wazuh.list \
-    && apt-get update \
-    && WAZUH_MANAGER_IP=${WAZUH_MANAGER_IP} apt-get install -y wazuh-agent \
-    && rm -rf /var/lib/apt/lists/*
+RUN sed -i 's/deb.debian.org/archive.debian.org/g' /etc/apt/sources.list \
+    && sed -i 's/security.debian.org/archive.debian.org/g' /etc/apt/sources.list \
+    && sed -i '/stretch-updates/d' /etc/apt/sources.list \
+    && apt-get update -o Acquire::Check-Valid-Until=false || true \
+    && apt-get install -y --no-install-recommends -o Acquire::Check-Valid-Until=false \
+        curl gnupg lsb-release ca-certificates apt-transport-https iproute2 iputils-ping || true
 
 COPY ossec.conf /var/ossec/etc/ossec.conf
-RUN chown -R wazuh:wazuh /var/ossec/etc/ossec.conf \
-    && mkdir -p /var/ossec/logs \
-    && chown -R wazuh:wazuh /var/ossec/logs
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
